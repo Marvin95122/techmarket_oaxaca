@@ -8,4 +8,12 @@ Rails.application.routes.draw do
     :update,
     :destroy
   ]
+
+  resources :usuarios, only: [
+    :index,
+    :show,
+    :create,
+    :update,
+    :destroy
+  ]
 end
