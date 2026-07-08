@@ -1,4 +1,7 @@
 class ArticulosController < ApplicationController
+  before_action :autenticar_usuario!, only: [:create, :update, :destroy]
+  before_action :solo_administrador!, only: [:create, :update, :destroy]
+
   def index
     articulos = Articulo.all.order(:id)
 

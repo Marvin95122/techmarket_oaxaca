@@ -1,14 +1,18 @@
-Usuario.destroy_all
+CompraItem.destroy_all
+Compra.destroy_all
+CarritoItem.destroy_all
+Resena.destroy_all
 Articulo.destroy_all
+Usuario.destroy_all
 
-Usuario.create!(
+admin = Usuario.create!(
   nombre: "Administrador Principal",
   correo: "admin@techmarket.com",
   password: "12345",
   rol: "administrador"
 )
 
-Usuario.create!(
+usuario = Usuario.create!(
   nombre: "Usuario de Prueba",
   correo: "usuario@techmarket.com",
   password: "12345",
@@ -43,3 +47,5 @@ Articulo.create!(
 )
 
 puts "Datos de prueba creados correctamente"
+puts "Admin: admin@techmarket.com / 12345"
+puts "Usuario: usuario@techmarket.com / 12345"
