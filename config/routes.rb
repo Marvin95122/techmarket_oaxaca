@@ -4,38 +4,22 @@ Rails.application.routes.draw do
   post "/login", to: "auth#login"
   get "/perfil", to: "auth#perfil"
 
-  resources :usuarios, only: [
-    :index,
-    :show,
-    :create,
-    :update,
-    :destroy
-  ]
+  resources :usuarios, only: [:index, :show, :create, :update, :destroy]
+  resources :categorias, only: [:index, :show, :create, :update, :destroy]
+  resources :articulos, only: [:index, :show, :create, :update, :destroy]
+  resources :resenas, only: [:index, :show, :create, :update, :destroy]
 
-  resources :articulos, only: [
-    :index,
-    :show,
-    :create,
-    :update,
-    :destroy
-  ]
-
-  resources :resenas, only: [
-    :index,
-    :show,
-    :create,
-    :update,
-    :destroy
-  ]
+  get "/admin/promociones", to: "promociones#admin_index"
+  resources :promociones, only: [:index, :show, :create, :update, :destroy]
 
   resource :carrito, controller: "carritos", only: [:show] do
     post "items/:articulo_id", action: :agregar
     delete "items/:id", action: :eliminar
   end
 
-  resources :compras, only: [
-    :index,
-    :show,
-    :create
-  ]
+  resources :compras, only: [:index, :show, :create]
+
+  get "/reportes/ventas", to: "reportes#ventas"
+
+  resources :consultas_ia, only: [:index, :show, :destroy]
 end

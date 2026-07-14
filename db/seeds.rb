@@ -1,51 +1,74 @@
-CompraItem.destroy_all
-Compra.destroy_all
-CarritoItem.destroy_all
-Resena.destroy_all
-Articulo.destroy_all
-Usuario.destroy_all
-
-admin = Usuario.create!(
+admin = Usuario.find_or_initialize_by(correo: "admin@techmarket.com")
+admin.assign_attributes(
   nombre: "Administrador Principal",
-  correo: "admin@techmarket.com",
   password: "12345",
   rol: "administrador"
 )
+admin.save!
 
-usuario = Usuario.create!(
+usuario = Usuario.find_or_initialize_by(correo: "usuario@techmarket.com")
+usuario.assign_attributes(
   nombre: "Usuario de Prueba",
-  correo: "usuario@techmarket.com",
   password: "12345",
   rol: "usuario"
 )
+usuario.save!
 
-Articulo.create!(
-  nombre: "Laptop Lenovo IdeaPad",
+categorias = {
+  laptops: Categoria.find_or_create_by!(nombre: "Laptops") do |categoria|
+    categoria.descripcion = "Computadoras portátiles para estudio, trabajo y entretenimiento."
+  end,
+  accesorios: Categoria.find_or_create_by!(nombre: "Accesorios") do |categoria|
+    categoria.descripcion = "Periféricos y accesorios para computadora."
+  end,
+  audio: Categoria.find_or_create_by!(nombre: "Audio") do |categoria|
+    categoria.descripcion = "Audífonos, bocinas y dispositivos de audio."
+  end
+}
+
+laptop = Articulo.find_or_initialize_by(nombre: "Laptop Lenovo IdeaPad")
+laptop.assign_attributes(
   descripcion: "Laptop para estudiantes, programación y tareas escolares.",
-  precio: 12500.00,
+  precio: 12_500.00,
   stock: 8,
-  categoria: "Laptops",
+  categoria: categorias[:laptops],
   imagen_url: "https://example.com/laptop.jpg"
 )
+laptop.save!
 
-Articulo.create!(
-  nombre: "Mouse Logitech Inalámbrico",
+mouse = Articulo.find_or_initialize_by(nombre: "Mouse Logitech Inalámbrico")
+mouse.assign_attributes(
   descripcion: "Mouse compacto para oficina, escuela y uso diario.",
   precio: 350.00,
   stock: 25,
-  categoria: "Accesorios",
+  categoria: categorias[:accesorios],
   imagen_url: "https://example.com/mouse.jpg"
 )
+mouse.save!
 
-Articulo.create!(
-  nombre: "Audífonos Gamer",
+audifonos = Articulo.find_or_initialize_by(nombre: "Audífonos Gamer")
+audifonos.assign_attributes(
   descripcion: "Audífonos con micrófono para videojuegos y videollamadas.",
   precio: 780.00,
   stock: 12,
-  categoria: "Audio",
+  categoria: categorias[:audio],
   imagen_url: "https://example.com/audifonos.jpg"
 )
+audifonos.save!
 
-puts "Datos de prueba creados correctamente"
+promocion = Promocion.find_or_initialize_by(codigo: "BIENVENIDA10")
+promocion.assign_attributes(
+  nombre: "Descuento de bienvenida",
+  descripcion: "10% de descuento en artículos seleccionados.",
+  tipo_descuento: "porcentaje",
+  valor: 10,
+  fecha_inicio: Time.current.beginning_of_day,
+  fecha_fin: 30.days.from_now.end_of_day,
+  activa: true
+)
+promocion.save!
+promocion.articulos = [mouse, audifonos]
+
+puts "Datos de prueba creados o actualizados correctamente"
 puts "Admin: admin@techmarket.com / 12345"
 puts "Usuario: usuario@techmarket.com / 12345"

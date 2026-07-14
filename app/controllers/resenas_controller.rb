@@ -1,5 +1,6 @@
 class ResenasController < ApplicationController
   before_action :autenticar_usuario!, only: [:create, :update, :destroy]
+  before_action :usuario_o_administrador!, only: [:create]
 
   def index
     resenas = Resena.includes(:usuario, :articulo).order(:id)
@@ -26,8 +27,6 @@ class ResenasController < ApplicationController
   end
 
   def create
-    usuario_o_administrador!
-
     resena = usuario_actual.resenas.new(resena_params)
 
     if resena.save

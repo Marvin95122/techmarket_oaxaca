@@ -10,12 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_08_205020) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_14_050005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
+  create_table "articulo_promociones", force: :cascade do |t|
+    t.bigint "articulo_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "promocion_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["articulo_id", "promocion_id"], name: "index_articulo_promociones_unico", unique: true
+    t.index ["articulo_id"], name: "index_articulo_promociones_on_articulo_id"
+    t.index ["promocion_id"], name: "index_articulo_promociones_on_promocion_id"
+  end
+
   create_table "articulos", force: :cascade do |t|
-    t.string "categoria", null: false
+    t.bigint "categoria_id", null: false
     t.datetime "created_at", null: false
     t.text "descripcion", null: false
     t.string "imagen_url"
@@ -23,6 +33,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_08_205020) do
     t.decimal "precio", precision: 10, scale: 2, null: false
     t.integer "stock", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["categoria_id"], name: "index_articulos_on_categoria_id"
   end
 
   create_table "carrito_items", force: :cascade do |t|
@@ -34,6 +45,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_08_205020) do
     t.index ["articulo_id"], name: "index_carrito_items_on_articulo_id"
     t.index ["usuario_id", "articulo_id"], name: "index_carrito_items_on_usuario_id_and_articulo_id", unique: true
     t.index ["usuario_id"], name: "index_carrito_items_on_usuario_id"
+  end
+
+  create_table "categorias", force: :cascade do |t|
+    t.boolean "activa", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "descripcion"
+    t.string "nombre", null: false
+    t.datetime "updated_at", null: false
+    t.index ["nombre"], name: "index_categorias_on_nombre", unique: true
   end
 
   create_table "compra_items", force: :cascade do |t|
@@ -55,6 +75,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_08_205020) do
     t.datetime "updated_at", null: false
     t.bigint "usuario_id", null: false
     t.index ["usuario_id"], name: "index_compras_on_usuario_id"
+  end
+
+  create_table "consultas_ia", force: :cascade do |t|
+    t.jsonb "contexto", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.text "pregunta", null: false
+    t.text "respuesta", null: false
+    t.string "tipo", default: "chatbot", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "usuario_id"
+    t.index ["created_at"], name: "index_consultas_ia_on_created_at"
+    t.index ["tipo"], name: "index_consultas_ia_on_tipo"
+    t.index ["usuario_id"], name: "index_consultas_ia_on_usuario_id"
+  end
+
+  create_table "promociones", force: :cascade do |t|
+    t.boolean "activa", default: true, null: false
+    t.string "codigo"
+    t.datetime "created_at", null: false
+    t.text "descripcion"
+    t.datetime "fecha_fin", null: false
+    t.datetime "fecha_inicio", null: false
+    t.string "nombre", null: false
+    t.string "tipo_descuento", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "valor", precision: 10, scale: 2, null: false
+    t.index ["activa", "fecha_inicio", "fecha_fin"], name: "index_promociones_vigencia"
+    t.index ["codigo"], name: "index_promociones_on_codigo", unique: true
   end
 
   create_table "resenas", force: :cascade do |t|
@@ -79,11 +127,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_08_205020) do
     t.index ["correo"], name: "index_usuarios_on_correo", unique: true
   end
 
+  add_foreign_key "articulo_promociones", "articulos"
+  add_foreign_key "articulo_promociones", "promociones", column: "promocion_id"
+  add_foreign_key "articulos", "categorias"
   add_foreign_key "carrito_items", "articulos"
   add_foreign_key "carrito_items", "usuarios"
   add_foreign_key "compra_items", "articulos"
   add_foreign_key "compra_items", "compras"
   add_foreign_key "compras", "usuarios"
+  add_foreign_key "consultas_ia", "usuarios"
   add_foreign_key "resenas", "articulos"
   add_foreign_key "resenas", "usuarios"
 end

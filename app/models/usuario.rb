@@ -6,6 +6,7 @@ class Usuario < ApplicationRecord
   has_many :resenas, dependent: :destroy
   has_many :carrito_items, dependent: :destroy
   has_many :compras, dependent: :destroy
+  has_many :consultas_ia, class_name: "ConsultaIa", dependent: :nullify
 
   validates :nombre, presence: true
   validates :correo, presence: true, uniqueness: true
