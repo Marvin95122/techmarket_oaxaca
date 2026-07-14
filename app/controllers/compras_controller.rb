@@ -1,7 +1,5 @@
 class ComprasController < ApplicationController
   before_action :autenticar_usuario!
-  before_action :usuario_o_administrador!, only: [:create]
-  before_action :autenticar_usuario!, only: [:index, :show]
 
   def index
     compras = if usuario_actual.administrador?
@@ -34,6 +32,7 @@ class ComprasController < ApplicationController
   end
 
   def create
+    usuario_o_administrador!
     items = usuario_actual.carrito_items.includes(:articulo)
 
     if items.empty?
