@@ -1,6 +1,6 @@
 class ComprasController < ApplicationController
   before_action :autenticar_usuario!
-  before_action :usuario_o_administrador!, only: [:create]
+  before_action :usuario_o_administrador!
 
   def index
     compras = if usuario_actual.administrador?

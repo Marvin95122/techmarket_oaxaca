@@ -1,6 +1,6 @@
 class ConsultasIaController < ApplicationController
   before_action :autenticar_usuario!
-  before_action :buscar_consulta, only: [:show, :destroy]
+  before_action :usuario_o_administrador!
 
   def index
     consultas = if usuario_actual.administrador?
