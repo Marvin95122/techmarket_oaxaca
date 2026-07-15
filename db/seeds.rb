@@ -2,7 +2,8 @@ admin = Usuario.find_or_initialize_by(correo: "admin@techmarket.com")
 admin.assign_attributes(
   nombre: "Administrador Principal",
   password: "12345",
-  rol: "administrador"
+  rol: "administrador",
+  activo: true
 )
 admin.save!
 
@@ -10,7 +11,8 @@ usuario = Usuario.find_or_initialize_by(correo: "usuario@techmarket.com")
 usuario.assign_attributes(
   nombre: "Usuario de Prueba",
   password: "12345",
-  rol: "usuario"
+  rol: "usuario",
+  activo: true
 )
 usuario.save!
 
@@ -26,12 +28,25 @@ categorias = {
   end
 }
 
+marcas = {
+  lenovo: Marca.find_or_create_by!(nombre: "Lenovo") do |marca|
+    marca.descripcion = "Computadoras y dispositivos tecnológicos Lenovo."
+  end,
+  logitech: Marca.find_or_create_by!(nombre: "Logitech") do |marca|
+    marca.descripcion = "Periféricos y accesorios Logitech."
+  end,
+  generica: Marca.find_or_create_by!(nombre: "Genérica") do |marca|
+    marca.descripcion = "Productos de distintas marcas o marca no especificada."
+  end
+}
+
 laptop = Articulo.find_or_initialize_by(nombre: "Laptop Lenovo IdeaPad")
 laptop.assign_attributes(
   descripcion: "Laptop para estudiantes, programación y tareas escolares.",
   precio: 12_500.00,
   stock: 8,
   categoria: categorias[:laptops],
+  marca: marcas[:lenovo],
   imagen_url: "https://example.com/laptop.jpg"
 )
 laptop.save!
@@ -42,6 +57,7 @@ mouse.assign_attributes(
   precio: 350.00,
   stock: 25,
   categoria: categorias[:accesorios],
+  marca: marcas[:logitech],
   imagen_url: "https://example.com/mouse.jpg"
 )
 mouse.save!
@@ -52,6 +68,7 @@ audifonos.assign_attributes(
   precio: 780.00,
   stock: 12,
   categoria: categorias[:audio],
+  marca: marcas[:generica],
   imagen_url: "https://example.com/audifonos.jpg"
 )
 audifonos.save!

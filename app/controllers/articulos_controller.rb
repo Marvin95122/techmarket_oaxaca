@@ -3,9 +3,18 @@ class ArticulosController < ApplicationController
   before_action :solo_administrador!, only: [:create, :update, :destroy]
 
   def index
-    articulos = Articulo.includes(:categoria, :promociones).order(:id)
+    articulos = Articulo.includes(:categoria, :marca, :promociones).order(:id)
     articulos = articulos.where(categoria_id: params[:categoria_id]) if params[:categoria_id].present?
-    articulos = articulos.where("articulos.nombre ILIKE ?", "%#{params[:buscar]}%") if params[:buscar].present?
+    articulos = articulos.where(marca_id: params[:marca_id]) if params[:marca_id].present?
+
+    if params[:buscar].present?
+      termino = "%#{ActiveRecord::Base.sanitize_sql_like(params[:buscar])}%"
+      articulos = articulos.where(
+        "articulos.nombre ILIKE :termino OR articulos.descripcion ILIKE :termino",
+        termino: termino
+      )
+    end
+
     articulos = articulos.where("stock > 0") if params[:con_stock] == "true"
 
     render json: {
@@ -16,7 +25,7 @@ class ArticulosController < ApplicationController
   end
 
   def show
-    articulo = Articulo.includes(:categoria, :promociones).find(params[:id])
+    articulo = Articulo.includes(:categoria, :marca, :promociones).find(params[:id])
 
     render json: formato_articulo(articulo), status: :ok
   rescue ActiveRecord::RecordNotFound
@@ -78,30 +87,41 @@ class ArticulosController < ApplicationController
   private
 
   def articulo_params
-    params.permit(:nombre, :descripcion, :precio, :stock, :categoria_id, :imagen_url)
+    params.permit(
+      :nombre,
+      :descripcion,
+      :precio,
+      :stock,
+      :categoria_id,
+      :marca_id,
+      :imagen_url
+    )
   end
 
   def formato_articulo(articulo)
-    promociones = articulo.promociones.select(&:vigente?)
-    mejor_promocion = promociones.max_by { |promocion| promocion.descuento_para(articulo.precio) }
+    promocion = articulo.mejor_promocion_vigente
 
     {
       id: articulo.id,
       nombre: articulo.nombre,
       descripcion: articulo.descripcion,
       precio: articulo.precio,
-      precio_final: mejor_promocion ? mejor_promocion.precio_final(articulo.precio) : articulo.precio,
+      precio_final: articulo.precio_final,
       stock: articulo.stock,
       imagen_url: articulo.imagen_url,
       categoria: {
         id: articulo.categoria.id,
         nombre: articulo.categoria.nombre
       },
-      promocion: mejor_promocion && {
-        id: mejor_promocion.id,
-        nombre: mejor_promocion.nombre,
-        tipo_descuento: mejor_promocion.tipo_descuento,
-        valor: mejor_promocion.valor
+      marca: {
+        id: articulo.marca.id,
+        nombre: articulo.marca.nombre
+      },
+      promocion: promocion && {
+        id: promocion.id,
+        nombre: promocion.nombre,
+        tipo_descuento: promocion.tipo_descuento,
+        valor: promocion.valor
       }
     }
   end

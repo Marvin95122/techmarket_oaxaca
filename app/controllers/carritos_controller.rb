@@ -3,7 +3,7 @@ class CarritosController < ApplicationController
   before_action :usuario_o_administrador!
 
   def show
-    items = usuario_actual.carrito_items.includes(:articulo).order(:id)
+    items = usuario_actual.carrito_items.includes(articulo: :promociones).order(:id)
 
     render json: {
       mensaje: "Carrito del usuario",
@@ -43,14 +43,12 @@ class CarritosController < ApplicationController
       item: formato_item(item)
     }, status: :ok
   rescue ActiveRecord::RecordNotFound
-    render json: {
-      mensaje: "Artículo no encontrado"
-    }, status: :not_found
+    render json: { mensaje: "Artículo no encontrado" }, status: :not_found
   end
 
   def eliminar
     item = usuario_actual.carrito_items.find(params[:id])
-    item.destroy
+    item.destroy!
 
     render json: {
       mensaje: "Artículo eliminado del carrito",
@@ -65,19 +63,27 @@ class CarritosController < ApplicationController
   private
 
   def calcular_total(items)
-    items.sum { |item| item.cantidad * item.articulo.precio }
+    items.sum { |item| item.cantidad * item.articulo.precio_final }
   end
 
   def formato_item(item)
+    precio_unitario = item.articulo.precio_final
+    promocion = item.articulo.mejor_promocion_vigente
+
     {
       id: item.id,
       cantidad: item.cantidad,
-      subtotal: item.cantidad * item.articulo.precio,
+      subtotal: item.cantidad * precio_unitario,
       articulo: {
         id: item.articulo.id,
         nombre: item.articulo.nombre,
-        precio: item.articulo.precio,
-        stock: item.articulo.stock
+        precio_original: item.articulo.precio,
+        precio_unitario: precio_unitario,
+        stock: item.articulo.stock,
+        promocion: promocion && {
+          id: promocion.id,
+          nombre: promocion.nombre
+        }
       }
     }
   end

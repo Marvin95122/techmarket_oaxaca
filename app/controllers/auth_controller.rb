@@ -2,12 +2,19 @@ class AuthController < ApplicationController
   before_action :autenticar_usuario!, only: [:perfil]
 
   def login
-    usuario = Usuario.find_by(correo: params[:correo])
+    correo = params[:correo].to_s.strip.downcase
+    usuario = Usuario.find_by(correo: correo)
 
     unless usuario&.authenticate(params[:password])
       return render json: {
         mensaje: "Correo o contraseña incorrectos"
       }, status: :unauthorized
+    end
+
+    unless usuario.activo?
+      return render json: {
+        mensaje: "La cuenta está deshabilitada. Contacta al administrador."
+      }, status: :forbidden
     end
 
     token = generar_token(usuario)

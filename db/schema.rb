@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_14_050005) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_15_193003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,11 +29,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_050005) do
     t.datetime "created_at", null: false
     t.text "descripcion", null: false
     t.string "imagen_url"
+    t.bigint "marca_id", null: false
     t.string "nombre", null: false
     t.decimal "precio", precision: 10, scale: 2, null: false
     t.integer "stock", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["categoria_id"], name: "index_articulos_on_categoria_id"
+    t.index ["marca_id"], name: "index_articulos_on_marca_id"
   end
 
   create_table "carrito_items", force: :cascade do |t|
@@ -69,11 +71,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_050005) do
   end
 
   create_table "compras", force: :cascade do |t|
+    t.datetime "cancelada_en"
     t.datetime "created_at", null: false
     t.string "estado", default: "pagada", null: false
+    t.text "motivo_cancelacion"
     t.decimal "total", precision: 10, scale: 2, default: "0.0", null: false
     t.datetime "updated_at", null: false
     t.bigint "usuario_id", null: false
+    t.index ["cancelada_en"], name: "index_compras_on_cancelada_en"
+    t.index ["estado"], name: "index_compras_on_estado"
     t.index ["usuario_id"], name: "index_compras_on_usuario_id"
   end
 
@@ -88,6 +94,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_050005) do
     t.index ["created_at"], name: "index_consultas_ia_on_created_at"
     t.index ["tipo"], name: "index_consultas_ia_on_tipo"
     t.index ["usuario_id"], name: "index_consultas_ia_on_usuario_id"
+  end
+
+  create_table "marcas", force: :cascade do |t|
+    t.boolean "activa", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "descripcion"
+    t.string "nombre", null: false
+    t.datetime "updated_at", null: false
+    t.index ["nombre"], name: "index_marcas_on_nombre", unique: true
   end
 
   create_table "promociones", force: :cascade do |t|
@@ -118,18 +133,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_050005) do
   end
 
   create_table "usuarios", force: :cascade do |t|
+    t.boolean "activo", default: true, null: false
     t.string "correo", null: false
     t.datetime "created_at", null: false
     t.string "nombre", null: false
     t.string "password_digest", null: false
     t.string "rol", default: "usuario", null: false
     t.datetime "updated_at", null: false
+    t.index ["activo"], name: "index_usuarios_on_activo"
     t.index ["correo"], name: "index_usuarios_on_correo", unique: true
   end
 
   add_foreign_key "articulo_promociones", "articulos"
   add_foreign_key "articulo_promociones", "promociones", column: "promocion_id"
   add_foreign_key "articulos", "categorias"
+  add_foreign_key "articulos", "marcas"
   add_foreign_key "carrito_items", "articulos"
   add_foreign_key "carrito_items", "usuarios"
   add_foreign_key "compra_items", "articulos"

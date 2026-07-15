@@ -30,6 +30,12 @@ class ApplicationController < ActionController::API
     begin
       decoded = JWT.decode(token, jwt_secret, true, { algorithm: "HS256" }).first
       @usuario_actual = Usuario.find(decoded["usuario_id"])
+
+      unless @usuario_actual.activo?
+        return render json: {
+          mensaje: "La cuenta está deshabilitada."
+        }, status: :forbidden
+      end
     rescue JWT::ExpiredSignature
       render json: {
         mensaje: "Token expirado. Inicia sesión nuevamente."

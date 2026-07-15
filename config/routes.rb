@@ -4,8 +4,15 @@ Rails.application.routes.draw do
   post "/login", to: "auth#login"
   get "/perfil", to: "auth#perfil"
 
-  resources :usuarios, only: [:index, :show, :create, :update, :destroy]
+  resources :usuarios, only: [:index, :show, :create, :update, :destroy] do
+    member do
+      patch :deshabilitar
+      patch :habilitar
+    end
+  end
+
   resources :categorias, only: [:index, :show, :create, :update, :destroy]
+  resources :marcas, only: [:index, :show, :create, :update, :destroy]
   resources :articulos, only: [:index, :show, :create, :update, :destroy]
   resources :resenas, only: [:index, :show, :create, :update, :destroy]
 
@@ -17,9 +24,14 @@ Rails.application.routes.draw do
     delete "items/:id", action: :eliminar
   end
 
-  resources :compras, only: [:index, :show, :create]
+  resources :compras, only: [:index, :show, :create] do
+    member do
+      patch :cancelar
+    end
+  end
 
   get "/reportes/ventas", to: "reportes#ventas"
+  get "/dashboard/resumen", to: "dashboard#resumen"
 
   resources :consultas_ia, only: [:index, :show, :destroy]
 end

@@ -3,6 +3,10 @@ class Articulo < ApplicationRecord
              class_name: "Categoria",
              foreign_key: :categoria_id
 
+  belongs_to :marca,
+             class_name: "Marca",
+             foreign_key: :marca_id
+
   has_many :resenas,
            dependent: :destroy
 
@@ -22,22 +26,26 @@ class Articulo < ApplicationRecord
            through: :articulo_promociones,
            source: :promocion
 
-  validates :nombre,
-            presence: true
-
-  validates :descripcion,
-            presence: true
-
+  validates :nombre, presence: true
+  validates :descripcion, presence: true
   validates :precio,
             presence: true,
-            numericality: {
-              greater_than_or_equal_to: 0
-            }
-
+            numericality: { greater_than_or_equal_to: 0 }
   validates :stock,
             presence: true,
             numericality: {
               only_integer: true,
               greater_than_or_equal_to: 0
             }
+
+  def mejor_promocion_vigente
+    promociones.vigentes.max_by do |promocion|
+      promocion.descuento_para(precio)
+    end
+  end
+
+  def precio_final
+    promocion = mejor_promocion_vigente
+    promocion ? promocion.precio_final(precio) : precio
+  end
 end
