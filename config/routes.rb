@@ -33,5 +33,9 @@ Rails.application.routes.draw do
   get "/reportes/ventas", to: "reportes#ventas"
   get "/dashboard/resumen", to: "dashboard#resumen"
 
+  get "/ia/estado", to: "ia#estado"
+  post "/ia/chat", to: "ia#chat"
+  post "/ia/recomendaciones", to: "ia#recomendaciones"
+
   resources :consultas_ia, only: [:index, :show, :destroy]
 end
