@@ -48,7 +48,7 @@ class IaController < ApplicationController
     resultado = GeminiService.new.generar(
       entrada: construir_entrada_chat(pregunta, catalogo),
       instruccion_sistema: instruccion_chat,
-      temperatura: 0.2,
+      thinking_level: "low",
       max_tokens: 850
     )
 
@@ -113,7 +113,7 @@ class IaController < ApplicationController
         candidatos: candidatos
       ),
       instruccion_sistema: instruccion_recomendaciones,
-      temperatura: 0.25,
+      thinking_level: "low",
       max_tokens: 900
     )
 

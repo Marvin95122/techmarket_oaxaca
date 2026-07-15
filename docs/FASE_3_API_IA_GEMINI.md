@@ -67,14 +67,14 @@ Content-Type: application/json
 
 ```powershell
 $env:GEMINI_API_KEY="TU_CLAVE_PRIVADA"
-$env:GEMINI_MODEL="gemini-2.5-flash"
+$env:GEMINI_MODEL="gemini-3.5-flash"
 ```
 
 ### Ubuntu, sesión actual
 
 ```bash
 export GEMINI_API_KEY="TU_CLAVE_PRIVADA"
-export GEMINI_MODEL="gemini-2.5-flash"
+export GEMINI_MODEL="gemini-3.5-flash"
 ```
 
 La clave nunca debe guardarse en GitHub, React, React Native o Flutter.
@@ -100,7 +100,7 @@ Body:
 
 ```json
 {
-  "model": "gemini-2.5-flash",
+  "model": "gemini-3.5-flash",
   "input": "Responde en español: ¿qué es una API REST?",
   "store": false
 }

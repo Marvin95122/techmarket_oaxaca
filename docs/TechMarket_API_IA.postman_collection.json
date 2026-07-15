@@ -16,7 +16,7 @@
     },
     {
       "key": "gemini_model",
-      "value": "gemini-2.5-flash"
+      "value": "gemini-3.5-flash"
     },
     {
       "key": "admin_token",
