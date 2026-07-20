@@ -21,6 +21,7 @@ Rails.application.routes.draw do
 
   resource :carrito, controller: "carritos", only: [:show] do
     post "items/:articulo_id", action: :agregar
+    patch "items/:id", action: :actualizar
     delete "items/:id", action: :eliminar
   end
 

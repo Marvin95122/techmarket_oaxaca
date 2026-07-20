@@ -3,7 +3,10 @@ class CarritosController < ApplicationController
   before_action :usuario_o_administrador!
 
   def show
-    items = usuario_actual.carrito_items.includes(articulo: :promociones).order(:id)
+    items = usuario_actual
+            .carrito_items
+            .includes(articulo: :promociones)
+            .order(:id)
 
     render json: {
       mensaje: "Carrito del usuario",
@@ -40,19 +43,66 @@ class CarritosController < ApplicationController
 
     render json: {
       mensaje: "Artículo agregado al carrito",
-      item: formato_item(item)
+      item: formato_item(item),
+      total: calcular_total(
+        usuario_actual.carrito_items.includes(articulo: :promociones)
+      )
     }, status: :ok
   rescue ActiveRecord::RecordNotFound
-    render json: { mensaje: "Artículo no encontrado" }, status: :not_found
+    render json: {
+      mensaje: "Artículo no encontrado"
+    }, status: :not_found
+  end
+
+  def actualizar
+    item = usuario_actual
+           .carrito_items
+           .includes(articulo: :promociones)
+           .find(params[:id])
+
+    cantidad = params[:cantidad].to_i
+
+    if cantidad <= 0
+      return render json: {
+        mensaje: "La cantidad debe ser mayor a 0"
+      }, status: :bad_request
+    end
+
+    if cantidad > item.articulo.stock
+      return render json: {
+        mensaje: "No hay suficiente stock disponible"
+      }, status: :bad_request
+    end
+
+    item.update!(cantidad: cantidad)
+
+    render json: {
+      mensaje: "Cantidad actualizada correctamente",
+      item: formato_item(item),
+      total: calcular_total(
+        usuario_actual.carrito_items.includes(articulo: :promociones)
+      )
+    }, status: :ok
+  rescue ActiveRecord::RecordNotFound
+    render json: {
+      mensaje: "Artículo del carrito no encontrado"
+    }, status: :not_found
   end
 
   def eliminar
-    item = usuario_actual.carrito_items.find(params[:id])
+    item = usuario_actual
+           .carrito_items
+           .includes(articulo: :promociones)
+           .find(params[:id])
+
     item.destroy!
 
     render json: {
       mensaje: "Artículo eliminado del carrito",
-      item: formato_item(item)
+      item: formato_item(item),
+      total: calcular_total(
+        usuario_actual.carrito_items.includes(articulo: :promociones)
+      )
     }, status: :ok
   rescue ActiveRecord::RecordNotFound
     render json: {
@@ -63,7 +113,9 @@ class CarritosController < ApplicationController
   private
 
   def calcular_total(items)
-    items.sum { |item| item.cantidad * item.articulo.precio_final }
+    items.sum do |item|
+      item.cantidad * item.articulo.precio_final
+    end
   end
 
   def formato_item(item)
