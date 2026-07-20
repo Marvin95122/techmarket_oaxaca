@@ -5,11 +5,17 @@ class ComprasController < ApplicationController
   before_action :buscar_compra, only: [:show, :cancelar]
 
   def index
-    compras = if usuario_actual.administrador?
-                Compra.includes(:usuario, compra_items: :articulo).order(created_at: :desc)
-              else
-                usuario_actual.compras.includes(compra_items: :articulo).order(created_at: :desc)
-              end
+    compras =
+      if usuario_actual.administrador?
+        Compra
+          .includes(:usuario, compra_items: :articulo)
+          .order(created_at: :desc)
+      else
+        usuario_actual
+          .compras
+          .includes(compra_items: :articulo)
+          .order(created_at: :desc)
+      end
 
     if usuario_actual.administrador?
       compras = compras.where(estado: params[:estado]) if params[:estado].present?
@@ -85,10 +91,10 @@ class ComprasController < ApplicationController
       mensaje: "Compra realizada correctamente",
       compra: formato_compra(compra)
     }, status: :created
-  rescue StandardError => e
+  rescue StandardError => error
     render json: {
       mensaje: "No se pudo realizar la compra",
-      error: e.message
+      error: error.message
     }, status: :bad_request
   end
 
@@ -124,12 +130,29 @@ class ComprasController < ApplicationController
   private
 
   def buscar_compra
-    @compra = Compra.includes(:usuario, compra_items: :articulo).find(params[:id])
+    @compra =
+      Compra
+        .includes(:usuario, compra_items: :articulo)
+        .find(params[:id])
   rescue ActiveRecord::RecordNotFound
-    render json: { mensaje: "Compra no encontrada" }, status: :not_found
+    render json: {
+      mensaje: "Compra no encontrada"
+    }, status: :not_found
   end
 
   def formato_compra(compra)
+    articulo_ids = compra.compra_items.map(&:articulo_id).uniq
+
+    resenas_por_articulo =
+      Resena
+        .where(
+          usuario_id: compra.usuario_id,
+          articulo_id: articulo_ids
+        )
+        .index_by(&:articulo_id)
+
+    compra_pagada = compra.estado == "pagada"
+
     {
       id: compra.id,
       total: compra.total,
@@ -143,13 +166,21 @@ class ComprasController < ApplicationController
         correo: compra.usuario.correo
       },
       items: compra.compra_items.map do |item|
+        resena = resenas_por_articulo[item.articulo_id]
+
         {
           id: item.id,
           articulo_id: item.articulo_id,
           nombre: item.articulo.nombre,
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
-          subtotal: item.subtotal
+          subtotal: item.subtotal,
+
+          # Datos que utiliza la aplicación móvil para mostrar el acceso
+          # directo a la reseña desde el detalle de la compra.
+          puede_resenar: compra_pagada && resena.nil?,
+          resenado: compra_pagada && resena.present?,
+          resena_id: compra_pagada ? resena&.id : nil
         }
       end
     }
