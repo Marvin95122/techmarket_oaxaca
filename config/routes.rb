@@ -28,6 +28,7 @@ Rails.application.routes.draw do
   resources :compras, only: [:index, :show, :create] do
     member do
       patch :cancelar
+      patch :actualizar_estado_envio
     end
   end
 

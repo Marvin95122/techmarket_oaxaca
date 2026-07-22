@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_15_193003) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_043000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -72,14 +72,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_193003) do
 
   create_table "compras", force: :cascade do |t|
     t.datetime "cancelada_en"
+    t.string "cancelada_por"
     t.datetime "created_at", null: false
+    t.datetime "en_transito_en"
+    t.datetime "entregada_en"
     t.string "estado", default: "pagada", null: false
+    t.string "estado_envio", default: "pendiente", null: false
     t.text "motivo_cancelacion"
     t.decimal "total", precision: 10, scale: 2, default: "0.0", null: false
     t.datetime "updated_at", null: false
     t.bigint "usuario_id", null: false
     t.index ["cancelada_en"], name: "index_compras_on_cancelada_en"
+    t.index ["cancelada_por"], name: "index_compras_on_cancelada_por"
+    t.index ["en_transito_en"], name: "index_compras_on_en_transito_en"
+    t.index ["entregada_en"], name: "index_compras_on_entregada_en"
     t.index ["estado"], name: "index_compras_on_estado"
+    t.index ["estado_envio"], name: "index_compras_on_estado_envio"
     t.index ["usuario_id"], name: "index_compras_on_usuario_id"
   end
 
