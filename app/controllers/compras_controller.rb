@@ -1,5 +1,5 @@
 class ComprasController < ApplicationController
-  class PagoSimuladoError < StandardError; end
+  class PagoError < StandardError; end
 
   before_action :autenticar_usuario!
   before_action :usuario_o_administrador!
@@ -74,7 +74,7 @@ class ComprasController < ApplicationController
         item.articulo.lock!
 
         if item.cantidad > item.articulo.stock
-          raise PagoSimuladoError, "Stock insuficiente para #{item.articulo.nombre}"
+          raise PagoError, "Stock insuficiente para #{item.articulo.nombre}"
         end
       end
 
@@ -112,9 +112,9 @@ class ComprasController < ApplicationController
       mensaje: mensaje_compra_creada(compra),
       compra: formato_compra(compra)
     }, status: :created
-  rescue PagoSimuladoError => error
+  rescue PagoError => error
     render json: {
-      mensaje: "No se pudo procesar el pago simulado",
+      mensaje: "No se pudo procesar el pago",
       error: error.message
     }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => error
@@ -168,7 +168,7 @@ class ComprasController < ApplicationController
     )
 
     render json: {
-      mensaje: "Pago en OXXO confirmado de forma simulada.",
+      mensaje: "Pago en OXXO confirmado correctamente.",
       compra: formato_compra(@compra.reload)
     }, status: :ok
   end
@@ -295,10 +295,10 @@ class ComprasController < ApplicationController
       vencimiento = datos[:vencimiento].to_s.strip
       cvv = datos[:cvv].to_s.gsub(/\D/, "")
 
-      raise PagoSimuladoError, "Escribe el nombre del titular de la tarjeta." if titular.blank?
-      raise PagoSimuladoError, "El número de tarjeta no es válido." unless numero_tarjeta_valido?(numero)
-      raise PagoSimuladoError, "La fecha de vencimiento debe tener el formato MM/AA y no estar vencida." unless vencimiento_valido?(vencimiento)
-      raise PagoSimuladoError, "El CVV debe contener 3 o 4 números." unless cvv.match?(/\A\d{3,4}\z/)
+      raise PagoError, "Escribe el nombre del titular de la tarjeta." if titular.blank?
+      raise PagoError, "El número de tarjeta no es válido." unless numero_tarjeta_valido?(numero)
+      raise PagoError, "La fecha de vencimiento debe tener el formato MM/AA y no estar vencida." unless vencimiento_valido?(vencimiento)
+      raise PagoError, "El CVV debe contener 3 o 4 números." unless cvv.match?(/\A\d{3,4}\z/)
 
       {
         metodo_pago: "tarjeta",
@@ -379,9 +379,9 @@ class ComprasController < ApplicationController
 
   def mensaje_compra_creada(compra)
     if compra.pago_con_tarjeta?
-      "Pago con tarjeta aprobado de forma simulada y compra registrada correctamente."
+      "Pago con tarjeta aprobado y compra registrada correctamente."
     else
-      "Referencia OXXO generada. La compra permanecerá pendiente hasta simular el pago."
+      "Referencia OXXO generada. La compra permanecerá pendiente hasta confirmar el pago."
     end
   end
 

@@ -87,7 +87,7 @@ class Compra < ApplicationRecord
       errors.add(:pago_confirmado_en, "debe existir para el pago con tarjeta") if pago_confirmado_en.blank?
       errors.add(:tarjeta_ultimos4, "debe contener los últimos cuatro dígitos") if tarjeta_ultimos4.blank?
       errors.add(:tarjeta_marca, "debe indicar la marca de la tarjeta") if tarjeta_marca.blank?
-      errors.add(:autorizacion_pago, "debe contener una autorización simulada") if autorizacion_pago.blank?
+      errors.add(:autorizacion_pago, "debe contener una autorización de pago") if autorizacion_pago.blank?
     elsif pago_en_oxxo?
       errors.add(:referencia_pago, "debe existir para el pago en OXXO") if referencia_pago.blank?
       errors.add(:codigo_barras, "debe existir para el pago en OXXO") if codigo_barras.blank?

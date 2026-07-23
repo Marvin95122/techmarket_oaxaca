@@ -30,7 +30,15 @@ class CarritosController < ApplicationController
       articulo: articulo
     )
 
-    nueva_cantidad = item.cantidad.to_i + cantidad
+    # Cuando el artículo todavía no existe en el carrito, Active Record
+    # aplica el valor predeterminado de la columna cantidad (1). Por eso no
+    # debemos sumarlo: la cantidad inicial debe ser exactamente la solicitada.
+    nueva_cantidad =
+      if item.persisted?
+        item.cantidad.to_i + cantidad
+      else
+        cantidad
+      end
 
     if nueva_cantidad > articulo.stock
       return render json: {
