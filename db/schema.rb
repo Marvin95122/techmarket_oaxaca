@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_043000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_23_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -71,23 +71,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_043000) do
   end
 
   create_table "compras", force: :cascade do |t|
+    t.string "autorizacion_pago"
     t.datetime "cancelada_en"
     t.string "cancelada_por"
+    t.string "codigo_barras"
     t.datetime "created_at", null: false
     t.datetime "en_transito_en"
     t.datetime "entregada_en"
-    t.string "estado", default: "pagada", null: false
+    t.string "estado", default: "pendiente", null: false
     t.string "estado_envio", default: "pendiente", null: false
+    t.string "metodo_pago", default: "tarjeta", null: false
     t.text "motivo_cancelacion"
+    t.datetime "pago_confirmado_en"
+    t.datetime "pago_expira_en"
+    t.string "referencia_pago"
+    t.string "tarjeta_marca"
+    t.string "tarjeta_ultimos4"
     t.decimal "total", precision: 10, scale: 2, default: "0.0", null: false
     t.datetime "updated_at", null: false
     t.bigint "usuario_id", null: false
+    t.index ["autorizacion_pago"], name: "index_compras_on_autorizacion_pago"
     t.index ["cancelada_en"], name: "index_compras_on_cancelada_en"
     t.index ["cancelada_por"], name: "index_compras_on_cancelada_por"
+    t.index ["codigo_barras"], name: "index_compras_on_codigo_barras", unique: true
     t.index ["en_transito_en"], name: "index_compras_on_en_transito_en"
     t.index ["entregada_en"], name: "index_compras_on_entregada_en"
     t.index ["estado"], name: "index_compras_on_estado"
     t.index ["estado_envio"], name: "index_compras_on_estado_envio"
+    t.index ["metodo_pago"], name: "index_compras_on_metodo_pago"
+    t.index ["pago_confirmado_en"], name: "index_compras_on_pago_confirmado_en"
+    t.index ["pago_expira_en"], name: "index_compras_on_pago_expira_en"
+    t.index ["referencia_pago"], name: "index_compras_on_referencia_pago", unique: true
     t.index ["usuario_id"], name: "index_compras_on_usuario_id"
   end
 

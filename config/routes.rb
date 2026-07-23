@@ -29,6 +29,7 @@ Rails.application.routes.draw do
     member do
       patch :cancelar
       patch :actualizar_estado_envio
+      patch :simular_pago_oxxo
     end
   end
 

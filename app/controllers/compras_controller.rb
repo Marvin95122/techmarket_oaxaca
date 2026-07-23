@@ -1,8 +1,16 @@
 class ComprasController < ApplicationController
+  class PagoSimuladoError < StandardError; end
+
   before_action :autenticar_usuario!
   before_action :usuario_o_administrador!
   before_action :solo_administrador!, only: [:actualizar_estado_envio]
-  before_action :buscar_compra, only: [:show, :cancelar, :actualizar_estado_envio]
+  before_action :buscar_compra,
+                only: [
+                  :show,
+                  :cancelar,
+                  :actualizar_estado_envio,
+                  :simular_pago_oxxo
+                ]
 
   def index
     compras =
@@ -20,6 +28,7 @@ class ComprasController < ApplicationController
     if usuario_actual.administrador?
       compras = compras.where(estado: params[:estado]) if params[:estado].present?
       compras = compras.where(estado_envio: params[:estado_envio]) if params[:estado_envio].present?
+      compras = compras.where(metodo_pago: params[:metodo_pago]) if params[:metodo_pago].present?
       compras = compras.where(usuario_id: params[:usuario_id]) if params[:usuario_id].present?
     end
 
@@ -49,6 +58,15 @@ class ComprasController < ApplicationController
       }, status: :bad_request
     end
 
+    metodo_pago = params[:metodo_pago].to_s
+
+    unless Compra::METODOS_PAGO.include?(metodo_pago)
+      return render json: {
+        mensaje: "Selecciona un método de pago válido: tarjeta u OXXO."
+      }, status: :unprocessable_entity
+    end
+
+    atributos_pago = construir_atributos_pago!(metodo_pago)
     compra = nil
 
     Compra.transaction do
@@ -56,7 +74,7 @@ class ComprasController < ApplicationController
         item.articulo.lock!
 
         if item.cantidad > item.articulo.stock
-          raise StandardError, "Stock insuficiente para #{item.articulo.nombre}"
+          raise PagoSimuladoError, "Stock insuficiente para #{item.articulo.nombre}"
         end
       end
 
@@ -64,14 +82,11 @@ class ComprasController < ApplicationController
         item.cantidad * item.articulo.precio_final
       end
 
-      # Mientras el docente confirma si se integrará una pasarela externa,
-      # las compras creadas desde el flujo actual se registran como pagadas.
-      # El modelo ya conserva el estado "pendiente" para el futuro pago en efectivo.
       compra = Compra.create!(
         usuario: usuario_actual,
         total: total,
-        estado: "pagada",
-        estado_envio: "pendiente"
+        estado_envio: "pendiente",
+        **atributos_pago
       )
 
       items.each do |item|
@@ -86,6 +101,7 @@ class ComprasController < ApplicationController
           subtotal: subtotal
         )
 
+        # Tanto el pago con tarjeta como la referencia OXXO reservan el stock.
         articulo.update!(stock: articulo.stock - item.cantidad)
       end
 
@@ -93,14 +109,68 @@ class ComprasController < ApplicationController
     end
 
     render json: {
-      mensaje: "Compra realizada correctamente",
+      mensaje: mensaje_compra_creada(compra),
       compra: formato_compra(compra)
     }, status: :created
+  rescue PagoSimuladoError => error
+    render json: {
+      mensaje: "No se pudo procesar el pago simulado",
+      error: error.message
+    }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid => error
+    render json: {
+      mensaje: "No se pudo registrar la compra",
+      error: error.record.errors.full_messages.join(", ")
+    }, status: :unprocessable_entity
   rescue StandardError => error
     render json: {
       mensaje: "No se pudo realizar la compra",
       error: error.message
     }, status: :bad_request
+  end
+
+  def simular_pago_oxxo
+    unless usuario_actual.administrador? || @compra.usuario_id == usuario_actual.id
+      return render json: {
+        mensaje: "Solo puedes confirmar el pago de tus propias compras."
+      }, status: :forbidden
+    end
+
+    unless @compra.pago_en_oxxo?
+      return render json: {
+        mensaje: "Esta compra no utiliza pago en OXXO."
+      }, status: :unprocessable_entity
+    end
+
+    if @compra.cancelada?
+      return render json: {
+        mensaje: "No se puede pagar una compra cancelada."
+      }, status: :unprocessable_entity
+    end
+
+    if @compra.pagada?
+      return render json: {
+        mensaje: "La compra ya se encuentra pagada.",
+        compra: formato_compra(@compra)
+      }, status: :ok
+    end
+
+    if @compra.pago_oxxo_vencido?
+      return render json: {
+        mensaje: "La referencia de pago OXXO ya venció. Cancela la compra y genera una nueva."
+      }, status: :unprocessable_entity
+    end
+
+    @compra.update!(
+      estado: "pagada",
+      pago_confirmado_en: Time.current,
+      autorizacion_pago: generar_autorizacion("OXXO")
+    )
+
+    render json: {
+      mensaje: "Pago en OXXO confirmado de forma simulada.",
+      compra: formato_compra(@compra.reload)
+    }, status: :ok
   end
 
   def cancelar
@@ -216,6 +286,105 @@ class ComprasController < ApplicationController
     }, status: :not_found
   end
 
+  def construir_atributos_pago!(metodo_pago)
+    case metodo_pago
+    when "tarjeta"
+      datos = params[:datos_tarjeta] || {}
+      numero = datos[:numero].to_s.gsub(/\D/, "")
+      titular = datos[:titular].to_s.strip
+      vencimiento = datos[:vencimiento].to_s.strip
+      cvv = datos[:cvv].to_s.gsub(/\D/, "")
+
+      raise PagoSimuladoError, "Escribe el nombre del titular de la tarjeta." if titular.blank?
+      raise PagoSimuladoError, "El número de tarjeta no es válido." unless numero_tarjeta_valido?(numero)
+      raise PagoSimuladoError, "La fecha de vencimiento debe tener el formato MM/AA y no estar vencida." unless vencimiento_valido?(vencimiento)
+      raise PagoSimuladoError, "El CVV debe contener 3 o 4 números." unless cvv.match?(/\A\d{3,4}\z/)
+
+      {
+        metodo_pago: "tarjeta",
+        estado: "pagada",
+        pago_confirmado_en: Time.current,
+        tarjeta_ultimos4: numero.last(4),
+        tarjeta_marca: detectar_marca_tarjeta(numero),
+        autorizacion_pago: generar_autorizacion("CARD")
+      }
+    when "oxxo"
+      {
+        metodo_pago: "oxxo",
+        estado: "pendiente",
+        referencia_pago: generar_referencia_oxxo,
+        codigo_barras: generar_codigo_barras,
+        pago_expira_en: 3.days.from_now
+      }
+    end
+  end
+
+  def numero_tarjeta_valido?(numero)
+    return false unless numero.match?(/\A\d{13,19}\z/)
+
+    suma = numero.reverse.chars.map(&:to_i).each_with_index.sum do |digito, indice|
+      if indice.odd?
+        duplicado = digito * 2
+        duplicado > 9 ? duplicado - 9 : duplicado
+      else
+        digito
+      end
+    end
+
+    (suma % 10).zero?
+  end
+
+  def vencimiento_valido?(vencimiento)
+    coincidencia = vencimiento.match(/\A(0[1-9]|1[0-2])\/(\d{2})\z/)
+    return false unless coincidencia
+
+    mes = coincidencia[1].to_i
+    anio = 2000 + coincidencia[2].to_i
+
+    Date.new(anio, mes, -1) >= Date.current
+  rescue Date::Error
+    false
+  end
+
+  def detectar_marca_tarjeta(numero)
+    return "Visa" if numero.start_with?("4")
+
+    primeros_dos = numero.first(2).to_i
+    primeros_cuatro = numero.first(4).to_i
+
+    if primeros_dos.between?(51, 55) || primeros_cuatro.between?(2221, 2720)
+      "Mastercard"
+    else
+      "Tarjeta"
+    end
+  end
+
+  def generar_referencia_oxxo
+    loop do
+      referencia = SecureRandom.random_number(10**14).to_s.rjust(14, "0")
+      return referencia unless Compra.exists?(referencia_pago: referencia)
+    end
+  end
+
+  def generar_codigo_barras
+    loop do
+      codigo = SecureRandom.random_number(10**18).to_s.rjust(18, "0")
+      return codigo unless Compra.exists?(codigo_barras: codigo)
+    end
+  end
+
+  def generar_autorizacion(prefijo)
+    "#{prefijo}-#{SecureRandom.hex(5).upcase}"
+  end
+
+  def mensaje_compra_creada(compra)
+    if compra.pago_con_tarjeta?
+      "Pago con tarjeta aprobado de forma simulada y compra registrada correctamente."
+    else
+      "Referencia OXXO generada. La compra permanecerá pendiente hasta simular el pago."
+    end
+  end
+
   def siguiente_estado_envio(compra)
     case compra.estado_envio
     when "pendiente"
@@ -234,6 +403,13 @@ class ComprasController < ApplicationController
     else
       "Estado de envío actualizado correctamente."
     end
+  end
+
+  def puede_confirmar_pago_oxxo?(compra)
+    return false unless compra.pago_en_oxxo? && compra.pendiente?
+    return false if compra.cancelada? || compra.pago_oxxo_vencido?
+
+    usuario_actual.administrador? || compra.usuario_id == usuario_actual.id
   end
 
   def puede_cancelar_compra?(compra)
@@ -291,12 +467,22 @@ class ComprasController < ApplicationController
       total: compra.total,
       estado: compra.estado,
       estado_envio: compra.estado_envio,
+      metodo_pago: compra.metodo_pago,
+      referencia_pago: compra.referencia_pago,
+      codigo_barras: compra.codigo_barras,
+      pago_confirmado_en: compra.pago_confirmado_en,
+      pago_expira_en: compra.pago_expira_en,
+      pago_oxxo_vencido: compra.pago_oxxo_vencido?,
+      tarjeta_ultimos4: compra.tarjeta_ultimos4,
+      tarjeta_marca: compra.tarjeta_marca,
+      autorizacion_pago: compra.autorizacion_pago,
       fecha: compra.created_at,
       cancelada_en: compra.cancelada_en,
       cancelada_por: compra.cancelada_por,
       motivo_cancelacion: compra.motivo_cancelacion,
       en_transito_en: compra.en_transito_en,
       entregada_en: compra.entregada_en,
+      puede_confirmar_pago_oxxo: puede_confirmar_pago_oxxo?(compra),
       puede_cancelar: puede_cancelar_compra?(compra),
       puede_actualizar_envio: puede_actualizar_envio?(compra),
       siguiente_estado_envio: siguiente_estado_envio(compra),
